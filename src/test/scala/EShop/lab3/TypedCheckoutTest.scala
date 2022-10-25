@@ -21,34 +21,37 @@ class TypedCheckoutTest
     testKit.shutdownTestKit()
 
   it should "send close confirmation to cart" in {
-    val orderManager = testKit.createTestProbe[OrderManager.Command]
+    val orderManagerCheckoutHandler = testKit.createTestProbe[TypedCheckout.Event].ref
+    val orderManagerPaymentHandler = testKit.createTestProbe[Payment.Event].ref
     val cart = testKit.createTestProbe[TypedCartActor.Command]
-    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManager.ref).start)
+    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManagerCheckoutHandler, orderManagerPaymentHandler).start)
 
     kit.run(StartCheckout)
     kit.run(SelectDeliveryMethod("test_method"))
-    kit.run(SelectPayment("test_payment",orderManager.ref))
+    kit.run(SelectPayment("test_payment"))
     kit.run(ConfirmPaymentReceived)
 
     cart.expectMessage(TypedCartActor.ConfirmCheckoutClosed)
   }
   it should "spawn Payment actor when SelectPayment is received" in {
-    val orderManager = testKit.createTestProbe[OrderManager.Command]
+    val orderManagerCheckoutHandler = testKit.createTestProbe[TypedCheckout.Event].ref
+    val orderManagerPaymentHandler = testKit.createTestProbe[Payment.Event].ref
     val cart = testKit.createTestProbe[TypedCartActor.Command]
-    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManager.ref).start)
+    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManagerCheckoutHandler, orderManagerPaymentHandler).start)
 
     kit.run(StartCheckout)
     kit.run(SelectDeliveryMethod("test_method"))
-    kit.run(SelectPayment("test_payment", orderManager.ref))
+    kit.run(SelectPayment("test_payment"))
     val effectOption = kit.retrieveAllEffects()
       .collectFirst { case e: SpawnedAnonymous[Payment.Command] => e }
     effectOption should be (Symbol("defined"))
   }
 
   it should "send cancel confirmation to cart actor when checkout is cancelled" in {
-    val orderManager = testKit.createTestProbe[OrderManager.Command]
+    val orderManagerCheckoutHandler = testKit.createTestProbe[TypedCheckout.Event].ref
+    val orderManagerPaymentHandler = testKit.createTestProbe[Payment.Event].ref
     val cart = testKit.createTestProbe[TypedCartActor.Command]
-    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManager.ref).start)
+    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManagerCheckoutHandler, orderManagerPaymentHandler).start)
 
     kit.run(StartCheckout)
     kit.run(SelectDeliveryMethod("test_method"))
@@ -58,9 +61,10 @@ class TypedCheckoutTest
   }
 
   it should "send cancel confirmation to cart actor when checkout is expired" in {
-    val orderManager = testKit.createTestProbe[OrderManager.Command]
+    val orderManagerCheckoutHandler = testKit.createTestProbe[TypedCheckout.Event].ref
+    val orderManagerPaymentHandler = testKit.createTestProbe[Payment.Event].ref
     val cart = testKit.createTestProbe[TypedCartActor.Command]
-    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManager.ref).start)
+    val kit = BehaviorTestKit(new TypedCheckout(cart.ref, orderManagerCheckoutHandler, orderManagerPaymentHandler).start)
 
     kit.run(StartCheckout)
     kit.run(SelectDeliveryMethod("test_method"))

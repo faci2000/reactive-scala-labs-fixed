@@ -29,7 +29,20 @@ class OrderManager(stash: StashBuffer[OrderManager.Command]) {
   import OrderManager._
 
   def start: Behavior[OrderManager.Command] = Behaviors.setup(ctx =>{
-    open(ctx.spawnAnonymous(new TypedCartActor(ctx.self).start))
+
+    val cartHandler = ctx.messageAdapter[TypedCartActor.Event]{
+      case TypedCartActor.CheckoutStarted(checkoutRef) => ConfirmCheckoutStarted(checkoutRef)
+    }
+
+    val checkoutHandler = ctx.messageAdapter[TypedCheckout.Event]{
+      case TypedCheckout.PaymentStarted(paymentRef) => ConfirmPaymentStarted(paymentRef)
+    }
+
+    val paymentHandler = ctx.messageAdapter[Payment.Event]{
+      case Payment.PaymentReceived => ConfirmPaymentReceived
+    }
+
+    open(ctx.spawnAnonymous(new TypedCartActor(cartHandler, checkoutHandler, paymentHandler).start))
   })
 
   def uninitialized: Behavior[OrderManager.Command] = start
@@ -62,7 +75,7 @@ class OrderManager(stash: StashBuffer[OrderManager.Command]) {
       msg match {
         case SelectDeliveryAndPaymentMethod(delivery, payment, sender) =>
           checkoutActorRef ! TypedCheckout.SelectDeliveryMethod(delivery)
-          checkoutActorRef ! TypedCheckout.SelectPayment(payment, ctx.self)
+          checkoutActorRef ! TypedCheckout.SelectPayment(payment)
           sender ! Done
           Behaviors.same
         case ConfirmPaymentStarted(paymentRef) =>

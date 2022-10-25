@@ -38,16 +38,18 @@ object TypedCheckout {
   case class SelectDeliveryMethod(method: String)                                            extends Command
   case object CancelCheckout                                                                 extends Command
   case object ExpireCheckout                                                                 extends Command
-  case class SelectPayment(payment: String, orderManagerRef: ActorRef[OrderManager.Command]) extends Command
+  case class SelectPayment(payment: String) extends Command
   case object ExpirePayment                                                                  extends Command
   case object ConfirmPaymentReceived                                                         extends Command
 
   sealed trait Event
   case object CheckOutClosed                           extends Event
-  case class PaymentStarted(paymentRef: ActorRef[Any]) extends Event
+  case class PaymentStarted(paymentRef: ActorRef[Payment.Command]) extends Event
 }
 
-class TypedCheckout(cartActor: ActorRef[TypedCartActor.Command], orderManager: ActorRef[OrderManager.Command]) {
+class TypedCheckout(cartActor: ActorRef[TypedCartActor.Command],
+                    orderManagerCheckoutHandler: ActorRef[TypedCheckout.Event],
+                    orderManagerPaymentHandler: ActorRef[Payment.Event]){
   import TypedCheckout._
 
   val checkoutTimerDuration: FiniteDuration = 1 seconds
@@ -81,9 +83,9 @@ class TypedCheckout(cartActor: ActorRef[TypedCartActor.Command], orderManager: A
   def selectingPaymentMethod(timer: Cancellable): Behavior[TypedCheckout.Command] = Behaviors.receive(
     (ctx,msg) =>
       msg match {
-        case SelectPayment(payment, orderManagerRef) =>
-          val paymentRef = ctx.spawnAnonymous(new Payment(payment, orderManagerRef, ctx.self).start)
-          orderManager ! OrderManager.ConfirmPaymentStarted(paymentRef)
+        case SelectPayment(payment) =>
+          val paymentRef = ctx.spawnAnonymous(new Payment(payment, orderManagerPaymentHandler, ctx.self).start)
+          orderManagerCheckoutHandler ! PaymentStarted(paymentRef)
           processingPayment(scheduleTimer(ctx,paymentTimerDuration,ExpirePayment))
 
         case CancelCheckout | ExpireCheckout | ExpirePayment =>

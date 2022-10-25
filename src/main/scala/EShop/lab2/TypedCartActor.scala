@@ -1,6 +1,6 @@
 package EShop.lab2
 
-import EShop.lab3.OrderManager
+import EShop.lab3.{OrderManager, Payment}
 import akka.actor.Cancellable
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
@@ -37,7 +37,9 @@ object TypedCartActor {
   case class CheckoutStarted(checkoutRef: ActorRef[TypedCheckout.Command]) extends Event
 }
 
-class TypedCartActor(orderManager: ActorRef[OrderManager.Command]) {
+class TypedCartActor(orderManagerCartHandler: ActorRef[TypedCartActor.Event],
+                    orderManagerCheckoutHandler: ActorRef[TypedCheckout.Event],
+                     orderManagerPaymentHandler: ActorRef[Payment.Event]) {
 
   import TypedCartActor._
 
@@ -82,9 +84,11 @@ class TypedCartActor(orderManager: ActorRef[OrderManager.Command]) {
 
         case StartCheckout =>
           timer.cancel()
-          val checkout = ctx.spawnAnonymous(new TypedCheckout(ctx.self, orderManager).start)
+          val checkout = ctx.spawnAnonymous(
+            new TypedCheckout(ctx.self, orderManagerCheckoutHandler, orderManagerPaymentHandler).start
+          )
           checkout ! TypedCheckout.StartCheckout
-          orderManager ! OrderManager.ConfirmCheckoutStarted(checkout)
+          orderManagerCartHandler ! CheckoutStarted(checkout)
           inCheckout(cart)
 
         case GetItems(sender) =>

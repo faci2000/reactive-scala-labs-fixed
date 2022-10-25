@@ -1,5 +1,6 @@
 package EShop.lab3
 
+import EShop.lab2
 import EShop.lab2.{Cart, TypedCartActor, TypedCheckout}
 import akka.actor.testkit.typed.Effect.SpawnedAnonymous
 import akka.actor.testkit.typed.scaladsl.{BehaviorTestKit, ScalaTestWithActorTestKit}
@@ -22,8 +23,10 @@ class TypedCartTest
 
   //use GetItems command which was added to make test easier
   it should "add item" in {
-    val orderManager = testKit.createTestProbe[OrderManager.Command].ref
-    val cart         = testKit.spawn(new TypedCartActor(orderManager).start)
+    val orderManagerCartHandler = testKit.createTestProbe[TypedCartActor.Event].ref
+    val orderManagerCheckoutHandler = testKit.createTestProbe[TypedCheckout.Event].ref
+    val orderManagerPaymentHandler = testKit.createTestProbe[Payment.Event].ref
+    val cart         = testKit.spawn(new TypedCartActor(orderManagerCartHandler,orderManagerCheckoutHandler,orderManagerPaymentHandler).start)
     val probe        = testKit.createTestProbe[Cart]
 
     cart ! AddItem("test_item")
@@ -33,8 +36,10 @@ class TypedCartTest
   }
 
   it should "be empty after adding and then removing the same item" in {
-    val orderManager = testKit.createTestProbe[OrderManager.Command].ref
-    val cart         = testKit.spawn(new TypedCartActor(orderManager).start)
+    val orderManagerCartHandler = testKit.createTestProbe[TypedCartActor.Event].ref
+    val orderManagerCheckoutHandler = testKit.createTestProbe[TypedCheckout.Event].ref
+    val orderManagerPaymentHandler = testKit.createTestProbe[Payment.Event].ref
+    val cart         = testKit.spawn(new TypedCartActor(orderManagerCartHandler,orderManagerCheckoutHandler,orderManagerPaymentHandler).start)
     val probe        = testKit.createTestProbe[Cart]
 
     cart ! AddItem("test_item")
@@ -45,8 +50,10 @@ class TypedCartTest
   }
 
   it should "start checkout" in {
-    val orderManager = testKit.createTestProbe[OrderManager.Command].ref
-    val kit = BehaviorTestKit(new TypedCartActor(orderManager).start)
+    val orderManagerCartHandler = testKit.createTestProbe[TypedCartActor.Event].ref
+    val orderManagerCheckoutHandler = testKit.createTestProbe[TypedCheckout.Event].ref
+    val orderManagerPaymentHandler = testKit.createTestProbe[Payment.Event].ref
+    val kit = BehaviorTestKit(new TypedCartActor(orderManagerCartHandler,orderManagerCheckoutHandler, orderManagerPaymentHandler).start)
 
     kit.run(AddItem("test_item"))
     kit.run(StartCheckout)
