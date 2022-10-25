@@ -77,7 +77,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[OrderManager.Command]().ref)
+    cart ! StartCheckout
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -95,7 +95,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[OrderManager.Command]().ref)
+    cart ! StartCheckout
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -118,7 +118,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[OrderManager.Command]().ref)
+    cart ! StartCheckout
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -141,7 +141,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(nonEmptyMsg)
     probe.expectMessage(1)
 
-    cart ! StartCheckout(testKit.createTestProbe[OrderManager.Command]().ref)
+    cart ! StartCheckout
 
     probe.expectMessage(inCheckoutMsg)
     probe.expectMessage(1)
@@ -158,7 +158,7 @@ class TypedCartActorTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike 
     probe.expectMessage(emptyMsg)
     probe.expectMessage(0)
 
-    cart ! StartCheckout(testKit.createTestProbe[OrderManager.Command]().ref)
+    cart ! StartCheckout
 
     probe.expectNoMessage()
   }
@@ -197,7 +197,8 @@ object TypedCartActorTest {
     probe: ActorRef[Any]
   ): ActorRef[TypedCartActor.Command] =
     testKit.spawn {
-      val cartActor = new TypedCartActor {
+      val  orderManager = testKit.createTestProbe[OrderManager.Command].ref
+      val cartActor = new TypedCartActor(orderManager) {
         override val cartTimerDuration: FiniteDuration = 1.seconds
 
         override def empty: Behavior[TypedCartActor.Command] =

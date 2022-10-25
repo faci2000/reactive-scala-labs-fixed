@@ -43,7 +43,8 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   it should "be in cancelled state after expire checkout timeout in selectingDelivery state" in {
     val probe = testKit.createTestProbe[String]
     val checkoutActor = testKit.spawn {
-      val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref) {
+      val orderManager = testKit.createTestProbe[OrderManager.Command].ref
+      val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref, orderManager) {
         override val checkoutTimerDuration: FiniteDuration = 1.seconds
 
         override def cancelled: Behavior[TypedCheckout.Command] =
@@ -91,7 +92,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
     val probe             = testKit.createTestProbe[String]
     val orderManagerProbe = testKit.createTestProbe[OrderManager.Command]
     val checkoutActor = testKit.spawn {
-      val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref) {
+      val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref,orderManagerProbe.ref) {
         override val checkoutTimerDuration: FiniteDuration = 1.seconds
 
         override def cancelled: Behavior[TypedCheckout.Command] =
@@ -146,7 +147,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
     val probe             = testKit.createTestProbe[String]
     val orderManagerProbe = testKit.createTestProbe[OrderManager.Command]
     val checkoutActor = testKit.spawn {
-      val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref) {
+      val checkout = new TypedCheckout(testKit.createTestProbe[TypedCartActor.Command]().ref, orderManagerProbe.ref) {
         override val paymentTimerDuration: FiniteDuration = 1.seconds
 
         override def cancelled: Behavior[TypedCheckout.Command] =
@@ -219,7 +220,8 @@ object TypedCheckoutTest {
     cartActorProbe: ActorRef[TypedCartActor.Command]
   ): ActorRef[TypedCheckout.Command] =
     testkit.spawn {
-      val checkout = new TypedCheckout(cartActorProbe) {
+      val orderManager = testkit.createTestProbe[OrderManager.Command].ref
+      val checkout = new TypedCheckout(cartActorProbe, orderManager) {
 
         override def start: Behavior[TypedCheckout.Command] =
           Behaviors.setup(_ => {
